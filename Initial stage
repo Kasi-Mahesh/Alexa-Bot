@@ -1,0 +1,91 @@
+import speech_recognition as sr
+import pyttsx3
+import pywhatkit
+from datetime import datetime
+import wikipedia
+
+recognizer = sr.Recognizer()
+
+engine = pyttsx3.init()
+engine.setProperty('rate', 170)
+engine.setProperty('volume', 1.0)
+voices = engine.getProperty('voices')
+engine.setProperty('voice', voices[1].id)
+
+
+def talk(text):
+    engine.say(text)
+    engine.runAndWait()
+
+
+def listen_command():
+    try:
+        with sr.Microphone() as source:
+            recognizer.adjust_for_ambient_noise(source, duration=2)
+            print("Listening...")
+            audio = recognizer.listen(source, timeout=9, phrase_time_limit=9)
+            command = recognizer.recognize_google(audio)
+            if 'Alexa' in command:
+                command = command.replace('Alexa', '').lower()
+                return command
+            else:
+                print("No command found with 'Alexa'.....")
+                talk("No command found with 'Alexa'.....")
+    except sr.UnknownValueError:
+        talk("Sorry, I could not understand the audio...")
+    except sr.WaitTimeoutError:
+        talk("I didn't hear anything. Please try again.")
+    except sr.RequestError:
+        talk("Sorry, my speech service is down.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        talk("An unexpected error occurred.")
+
+
+def run_alexa():
+    command = listen_command()
+    if command is None:
+        return
+
+    print(command)
+
+    if any(phrase in command for phrase in ['good morning', 'good afternoon', 'good evening']):
+        current_hour = datetime.now().hour
+        if 4 <= current_hour < 12:
+            print("Good morning, how can I assist you?")
+            talk("Good morning, how can I assist you?")
+        elif 12 <= current_hour < 16:
+            print("Good afternoon, how can I assist you?")
+            talk("Good afternoon, how can I assist you?")
+        else:
+            print("Good evening, how can I assist you?")
+            talk("Good evening, how can I assist you?")
+    elif 'this is' in command or 'meet' in command:
+        name = command.replace('this is', '').replace('meet', '').strip()
+        print(f"Hello {name}, it's nice to meet you.")
+        talk(f"Hello {name}, it's nice to meet you.")
+    elif 'play' in command:
+        song = command.replace('play', '').strip()
+        print('playing' + song)
+        talk(f'Playing ' + song)
+        pywhatkit.playonyt(song)
+    elif 'what is' in command or 'who is' in command or 'tell me about' in command:
+        try:
+            summary = wikipedia.summary(command, sentences=3)
+            print(summary)
+            talk(summary)
+        except wikipedia.exceptions.DisambiguationError as e:
+            talk("There are multiple entries for this search term. Please be more specific.")
+            print(f"Multiple entries found: {e.options}")
+        except wikipedia.exceptions.PageError:
+            talk("No information found on Wikipedia.")
+            print("No page found for the given command.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            talk("An error occurred while retrieving information.")
+
+
+talk("Alexa welcomes you....")
+print("Adjusting for ambient noise...")
+
+run_alexa()
